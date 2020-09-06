@@ -21,13 +21,14 @@ const CartDropdownContainer = () => {
       <Mutation mutation={TOGGLE_CART_HIDDEN}>
         {(toggleCartHidden) => (
           <Query query={GET_CART_ITEMS}>
-                      {({ data: { cartItems } }) => {
-                          return (
-                              <CartDropdown
-                                  toggleCartHidden={toggleCartHidden}
-                                  cartItems={cartItems}
-                              />
-                          )}}
+            {({ data: { cartItems } }) => {
+              return (
+                <CartDropdown
+                  toggleCartHidden={toggleCartHidden}
+                  cartItems={cartItems}
+                />
+              );
+            }}
           </Query>
         )}
       </Mutation>

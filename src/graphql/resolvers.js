@@ -1,5 +1,11 @@
 import { gql } from "apollo-boost";
-import { addItemToCart, getCartItemsCount } from "./cart.utils";
+import {
+  addItemToCart,
+  getCartItemsCount,
+  removeItemFromCart,
+  clearItemFromCart,
+  getCartTotal,
+} from "./cart.utils";
 
 export const typeDefs = gql`
   extend type Item {
@@ -8,6 +14,9 @@ export const typeDefs = gql`
   extend type Mutation {
     ToggleCartHidden: Boolean!
     AddItemToCart(item: Item!): [Item]!
+    RemoveItemFromCart(item: Item!): [Item]!
+    SetCurrentUser(user: User!): User!
+    ClearItemFromCart(item: Item!): [Item]!
   }
 `;
 const GET_CART_HIDDEN = gql`
@@ -15,6 +24,13 @@ const GET_CART_HIDDEN = gql`
     cartHidden @client
   }
 `;
+
+const GET_CART_TOTAL = gql`
+  {
+    cartTotal @client
+  }
+`;
+
 const GET_CART_ITEMS = gql`
   {
     cartItems @client
@@ -26,6 +42,29 @@ const GET_ITEM_COUNT = gql`
     itemCount @client
   }
 `;
+
+const GET_CURRENT_USER = gql`
+  {
+    currentUser @client
+  }
+`;
+
+const updateCartItemsRelatedQueries = (cache, newCartItems) => {
+  cache.writeQuery({
+    query: GET_ITEM_COUNT,
+    data: { itemCount: getCartItemsCount(newCartItems) },
+  });
+
+  cache.writeQuery({
+    query: GET_CART_TOTAL,
+    data: { cartTotal: getCartTotal(newCartItems) },
+  });
+
+  cache.writeQuery({
+    query: GET_CART_ITEMS,
+    data: { cartItems: newCartItems },
+  });
+};
 
 export const resolvers = {
   Mutation: {
@@ -45,16 +84,43 @@ export const resolvers = {
       });
       const newCartItems = addItemToCart(cartItems, item);
 
-      cache.writeQuery({
+      updateCartItemsRelatedQueries(cache, newCartItems);
+
+      return newCartItems;
+    },
+
+    removeItemFromCart: (_root, { item }, { cache }) => {
+      const { cartItems } = cache.readQuery({
         query: GET_CART_ITEMS,
-        data: { cartItems: newCartItems },
       });
+      const newCartItems = removeItemFromCart(cartItems, item);
+
+      updateCartItemsRelatedQueries(cache, newCartItems);
 
       cache.writeQuery({
         query: GET_ITEM_COUNT,
         data: { itemCount: getCartItemsCount(newCartItems) },
       });
       return newCartItems;
+    },
+    clearItemFromCart: (_root, { item }, { cache }) => {
+      const { cartItems } = cache.readQuery({
+        query: GET_CART_ITEMS,
+      });
+
+      const newCartItems = clearItemFromCart(cartItems, item);
+
+      updateCartItemsRelatedQueries(cache, newCartItems);
+
+      return newCartItems;
+    },
+    setCurrentUser: (_root, { user }, { cache }) => {
+      cache.writeQuery({
+        query: GET_CURRENT_USER,
+        data: { currentUser: user },
+      });
+
+      return user;
     },
   },
 };
